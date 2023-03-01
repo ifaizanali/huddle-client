@@ -13,6 +13,7 @@ function Room() {
   let { user, room } = useParams();
   const ref = React.useRef(null);
   const streamRef = React.useRef(null)
+  const myStreamRef = React.useRef(null);
   const [audio, setaudio] = useState(true)
   const [video, setvideo] = useState(true)
   const [screen, setscreen] = useState(false)
@@ -53,9 +54,9 @@ function Room() {
   });
 
 
-  peer.on('open', id => {
+  peer.on('open', async id => {
     console.log("pear id: ",id)
-    startCall()
+    await startCall()
     socket.emit('join-room', room, id, "peer")
   })
 
@@ -86,17 +87,20 @@ function Room() {
   }
 
 
-  function startCall(){
-    navigator.mediaDevices.getUserMedia({
+ async function startCall(){
+   await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: true
     }).then(stream => {
       const myVideo = document.createElement('video')
       const ms = stream.clone()
+	const mm = stream.clone()
+	mm.getAudioTracks()[0].enabled = false;
       const t = stream.getVideoTracks()[0].clone()
       ms.addTrack(t)
       streamRef.current = ms
-      addVideoStream(myVideo, ms)
+      myStreamRef.current = mm
+      addVideoStream(myVideo, mm)
       peer.on('call',  call => {
         call.answer(ms)
         const video = document.createElement('video')
@@ -176,6 +180,7 @@ function Room() {
 
     const handleToggleVideo = () => {
       streamRef.current.getVideoTracks()[0].enabled = !streamRef.current.getVideoTracks()[0].enabled
+      myStreamRef.current.getVideoTracks()[0].enabled = !myStreamRef.current.getVideoTracks()[0].enabled
       setvideo(!video)
     };
 
@@ -223,6 +228,7 @@ function Room() {
 
   return (
     <>
+      <p>Your Room ID: {room}</p>
       <div id='video-grid' ref={ref}></div>
       <div className='controls'>
         <button onClick={handleToggleAudio}>{audio ? 'Mute' : 'Unmute'}</button>
